@@ -1,0 +1,68 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "markitdown-service"
+dynamic = ["version"]
+description = 'A combined REST + MCP HTTP service for the "markitdown" library, meant for container deployment (e.g. Azure Container Apps).'
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+keywords = []
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: Implementation :: CPython",
+]
+dependencies = [
+  "mcp~=1.8.0",
+  "markitdown[all]>=0.1.1,<0.2.0",
+  "fastapi>=0.115,<1.0",
+  "uvicorn[standard]>=0.30,<1.0",
+  "python-multipart>=0.0.9",
+]
+
+[project.urls]
+Documentation = "https://github.com/microsoft/markitdown#readme"
+Issues = "https://github.com/microsoft/markitdown/issues"
+Source = "https://github.com/microsoft/markitdown"
+
+[tool.hatch.version]
+path = "src/markitdown_service/__about__.py"
+
+[project.scripts]
+markitdown-service = "markitdown_service.__main__:main"
+
+[tool.hatch.envs.types]
+extra-dependencies = [
+  "mypy>=1.0.0",
+]
+[tool.hatch.envs.types.scripts]
+check = "mypy --install-types --non-interactive {args:src/markitdown_service tests}"
+
+[tool.coverage.run]
+source_pkgs = ["markitdown-service", "tests"]
+branch = true
+parallel = true
+omit = [
+  "src/markitdown_service/__about__.py",
+]
+
+[tool.coverage.paths]
+markitdown-service = ["src/markitdown_service", "*/markitdown-service/src/markitdown_service"]
+tests = ["tests", "*/markitdown-service/tests"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
+
+[tool.hatch.build.targets.sdist]
+only-include = ["src/markitdown_service"]
