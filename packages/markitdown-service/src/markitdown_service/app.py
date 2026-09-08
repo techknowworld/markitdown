@@ -4,7 +4,9 @@
 Exposes:
   * GET  /health           - unauthenticated liveness/readiness probe
   * POST /convert          - {"uri": "..."} -> {"markdown": "..."}
+                              (add ?format=text for a plain-text response)
   * POST /convert/upload   - multipart file upload -> {"markdown": "..."}
+                              (add ?format=text for a plain-text response)
   * /mcp                   - the same MCP tool as markitdown-mcp, over
                               Streamable HTTP
 
@@ -21,11 +23,11 @@ import tempfile
 from collections.abc import AsyncIterator
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, UploadFile
+from fastapi import FastAPI, HTTPException, Query, UploadFile
 from markitdown import MarkItDown
 from mcp.server.fastmcp import FastMCP
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, PlainTextResponse
 from starlette.routing import Mount
 
 logger = logging.getLogger("markitdown_service")
@@ -148,8 +150,21 @@ async def health() -> dict:
     return {"status": "ok"}
 
 
-@app.post("/convert")
-async def convert(body: dict) -> dict:
+FormatParam = Query(
+    "json",
+    pattern="^(json|text)$",
+    description="'json' (default) returns {\"markdown\": ...}; 'text' returns the raw markdown as text/plain.",
+)
+
+
+def _format_response(markdown: str, format: str) -> dict | PlainTextResponse:
+    if format == "text":
+        return PlainTextResponse(markdown)
+    return {"markdown": markdown}
+
+
+@app.post("/convert", response_model=None)
+async def convert(body: dict, format: str = FormatParam) -> dict | PlainTextResponse:
     uri = body.get("uri")
     if not uri:
         raise HTTPException(status_code=422, detail="Request body must include 'uri'.")
@@ -160,11 +175,11 @@ async def convert(body: dict) -> dict:
     except Exception as e:
         logger.exception("Conversion failed for uri=%s", uri)
         raise HTTPException(status_code=422, detail=f"Conversion failed: {e}")
-    return {"markdown": markdown}
+    return _format_response(markdown, format)
 
 
-@app.post("/convert/upload")
-async def convert_upload(file: UploadFile) -> dict:
+@app.post("/convert/upload", response_model=None)
+async def convert_upload(file: UploadFile, format: str = FormatParam) -> dict | PlainTextResponse:
     suffix = Path(file.filename or "").suffix
     with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
         tmp_path = Path(tmp.name)
@@ -177,4 +192,4 @@ async def convert_upload(file: UploadFile) -> dict:
         raise HTTPException(status_code=422, detail=f"Conversion failed: {e}")
     finally:
         tmp_path.unlink(missing_ok=True)
-    return {"markdown": markdown}
+    return _format_response(markdown, format)

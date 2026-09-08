@@ -48,6 +48,47 @@ def test_convert_data_uri():
     assert response.json() == {"markdown": "hello world"}
 
 
+def test_convert_data_uri_text_format():
+    response = client.post(
+        "/convert?format=text",
+        json={"uri": "data:text/plain;base64,aGVsbG8gd29ybGQ="},
+        headers={"X-API-Key": "test-secret"},
+    )
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/plain")
+    assert response.text == "hello world"
+
+
+def test_convert_rejects_invalid_format():
+    response = client.post(
+        "/convert?format=xml",
+        json={"uri": "https://example.com"},
+        headers={"X-API-Key": "test-secret"},
+    )
+    assert response.status_code == 422
+
+
+def test_convert_upload():
+    response = client.post(
+        "/convert/upload",
+        files={"file": ("hello.txt", b"hello world", "text/plain")},
+        headers={"X-API-Key": "test-secret"},
+    )
+    assert response.status_code == 200
+    assert response.json() == {"markdown": "hello world"}
+
+
+def test_convert_upload_text_format():
+    response = client.post(
+        "/convert/upload?format=text",
+        files={"file": ("hello.txt", b"hello world", "text/plain")},
+        headers={"X-API-Key": "test-secret"},
+    )
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/plain")
+    assert response.text == "hello world"
+
+
 def test_mcp_mount_requires_key():
     response = client.post(
         "/mcp",

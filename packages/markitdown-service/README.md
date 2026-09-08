@@ -13,6 +13,17 @@ It exposes:
 | `POST /convert/upload` | API key | multipart file upload → `{"markdown": "..."}`               |
 | `/mcp`               | API key | the same `convert_to_markdown` MCP tool as markitdown-mcp, over Streamable HTTP |
 
+Both `/convert` and `/convert/upload` accept `?format=text` to get the raw markdown back as
+`text/plain` instead of JSON — handy for piping straight to a file from the command line without
+needing to unwrap a JSON response:
+
+```bash
+curl -s -X POST "http://localhost:8000/convert/upload?format=text" \
+  -H "X-API-Key: dev-secret" \
+  -F "file=@/path/to/document.pdf" \
+  -o document.md
+```
+
 ## Security notes
 
 - Every route except `/health` requires an `X-API-Key` header matching the `MARKITDOWN_API_KEY`
