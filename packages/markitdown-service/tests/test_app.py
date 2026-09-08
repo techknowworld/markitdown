@@ -48,6 +48,13 @@ def test_convert_data_uri():
     assert response.json() == {"markdown": "hello world"}
 
 
+def test_about_requires_no_auth():
+    response = client.get("/about")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/html")
+    assert "MarkItDown Service" in response.text
+
+
 def test_convert_data_uri_text_format():
     response = client.post(
         "/convert?format=text",

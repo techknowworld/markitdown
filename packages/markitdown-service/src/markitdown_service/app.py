@@ -3,6 +3,7 @@
 
 Exposes:
   * GET  /health           - unauthenticated liveness/readiness probe
+  * GET  /about            - unauthenticated HTML landing page
   * POST /convert          - {"uri": "..."} -> {"markdown": "..."}
                               (add ?format=text for a plain-text response)
   * POST /convert/upload   - multipart file upload -> {"markdown": "..."}
@@ -27,8 +28,12 @@ from fastapi import FastAPI, HTTPException, Query, UploadFile
 from markitdown import MarkItDown
 from mcp.server.fastmcp import FastMCP
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
-from starlette.responses import JSONResponse, PlainTextResponse
+from starlette.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from starlette.routing import Mount
+
+from markitdown_service.about import ABOUT_HTML
+
+UNAUTHENTICATED_PATHS = {"/health", "/about"}
 
 logger = logging.getLogger("markitdown_service")
 
@@ -77,7 +82,7 @@ class ApiKeyAuthMiddleware:
         self.app = app
 
     async def __call__(self, scope, receive, send):
-        if scope["type"] != "http" or scope["path"] == "/health":
+        if scope["type"] != "http" or scope["path"] in UNAUTHENTICATED_PATHS:
             await self.app(scope, receive, send)
             return
 
@@ -148,6 +153,11 @@ app.add_middleware(ApiKeyAuthMiddleware)
 @app.get("/health")
 async def health() -> dict:
     return {"status": "ok"}
+
+
+@app.get("/about", response_class=HTMLResponse)
+async def about() -> str:
+    return ABOUT_HTML
 
 
 FormatParam = Query(
